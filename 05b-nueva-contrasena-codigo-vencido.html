@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CiberHer · Nueva contraseña</title>
+</head>
+<body><nav aria-label="Prototipo" style="width:390px;max-width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 4px;box-sizing:border-box;font-family:'Atkinson Hyperlegible',system-ui,sans-serif"><a href="index.html#mapa" style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:12px;background:#FFFFFF;color:#031F4F;font-weight:700;font-size:16px;text-decoration:none;border:2px solid #031F4F">← Mapa de flujo</a><a href="01-bienvenida.html" style="color:#031F4F;font-weight:700;font-size:16px;padding:10px">Volver a empezar</a></nav>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#C9D3D9;display:flex;flex-direction:column;align-items:center;padding:0 0 32px;min-height:100vh;box-sizing:border-box}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="04-recuperar.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">Nueva contraseña</h1>
+  </div>
+
+  
+
+  
+    <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+      
+        <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #FDECEA; border: 2px solid #B42318">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <p style="margin: 0; font-size: 18px; line-height: 1.4">El código venció o ya se usó. <a href="04-recuperar.html" style="font-weight: 700">Pedir un código nuevo</a></p>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="codigo" style="font-size: 20px; font-weight: 700">Código de 6 números</label>
+        <input id="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="height: 72px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 34px; font-weight: 700; letter-spacing: 14px; text-align: center; color: #031F4F">
+        <p style="margin: 0; font-size: 17px; color: #4A5A61">Lo enviamos a m•••@correo.com</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="clave" style="font-size: 20px; font-weight: 700">Contraseña nueva</label>
+        <input id="clave" type="password" autocomplete="new-password" aria-describedby="reglas" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <p id="reglas" style="margin: 0; font-size: 17px; line-height: 1.4; color: #4A5A61">Al menos 8 caracteres, con una letra y un número.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="clave2" style="font-size: 20px; font-weight: 700">Repita la contraseña nueva</label>
+        <input id="clave2" type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <button style="height: 64px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; margin-top: 4px">Guardar contraseña</button>
+    </div>
+  
+</div>
+
+</body>
+</html>
