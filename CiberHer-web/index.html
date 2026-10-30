@@ -1,0 +1,1497 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Prototipo CiberHer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: cabecera corta con acciones, luego el mapa de flujo a escala dentro de un lienzo desplazable */
+:root {
+  --bg: #F3F5F7;
+  --surface: #FFFFFF;
+  --ink: #031F4F;
+  --muted: #4A5A61;
+  --line: #D5DDE1;
+  --accent: #F5B846;
+  --accent-ink: #031F4F;
+  --link: #1C4F7F;
+  --canvas: #E6EBEE;
+  --fm-ink: #031F4F;
+  --fm-muted: #4A5A61;
+  --font: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A1628; --surface: #12223A; --ink: #EEF2F6; --muted: #A9B7C2; --line: #26384F;
+    --accent: #F5B846; --accent-ink: #031F4F; --link: #8CC2E0; --canvas: #0E1D33;
+    --fm-ink: #EEF2F6; --fm-muted: #A9B7C2; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A1628; --surface: #12223A; --ink: #EEF2F6; --muted: #A9B7C2; --line: #26384F;
+  --accent: #F5B846; --accent-ink: #031F4F; --link: #8CC2E0; --canvas: #0E1D33;
+  --fm-ink: #EEF2F6; --fm-muted: #A9B7C2; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 17px; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 48px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.top { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: flex-end; justify-content: space-between; }
+.top > div { min-width: 0; flex: 1 1 420px; display: flex; flex-direction: column; gap: 8px; }
+.eyebrow { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-size: clamp(30px, 5vw, 44px); line-height: 1.05; text-wrap: balance; }
+.lede { margin: 0; max-width: 62ch; line-height: 1.5; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px; border-radius: 14px; font: 700 17px var(--font);
+  text-decoration: none; cursor: pointer; border: 2px solid transparent;
+}
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--ink); }
+.btn:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+.btn[disabled] { opacity: .55; cursor: default; }
+.status { margin: 0; min-height: 1.4em; font-size: 15px; color: var(--muted); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 0; padding: 0; list-style: none; font-size: 15px; color: var(--muted); }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.legend b { color: var(--ink); }
+.k-code { background: #F5B846; color: #031F4F; font-weight: 700; padding: 1px 7px; border-radius: 6px; }
+.k-chip { border: 2px dashed var(--link); border-radius: 6px; padding: 0 7px; color: var(--ink); }
+
+.canvas-box {
+  overflow: auto; border-radius: 20px; background: var(--canvas); border: 1px solid var(--line);
+  max-height: 78vh;
+}
+.canvas-zoom { padding: 48px; width: max-content; zoom: var(--z, .42); }
+.zoom { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--muted); }
+.zoom button {
+  width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface);
+  color: var(--ink); font: 700 20px var(--font); cursor: pointer;
+}
+.zoom output { min-width: 4ch; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink); }
+.map-bar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+
+.figma { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.figma section { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.figma h2 { margin: 0; font-size: 19px; }
+.figma p, .figma ol { margin: 0; line-height: 1.5; color: var(--muted); }
+.figma ol { padding-left: 20px; }
+.figma code { font-size: 15px; color: var(--ink); }
+
+.fm-name a { color: inherit; text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 600px) { .canvas-zoom { padding: 24px; } }
+@media (prefers-reduced-motion: no-preference) { .btn { transition: transform .12s ease; } .btn:active { transform: translateY(1px); } }
+
+.fm-map{display:flex;flex-direction:column;gap:140px;width:max-content}
+.fm-lane{display:flex;flex-direction:column;gap:36px}
+.fm-lane-head h2{margin:0;font:700 56px/1.1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--fm-ink)}
+.fm-lane-head p{margin:10px 0 0;font:400 26px/1.3 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--fm-muted)}
+.fm-row{display:flex;align-items:flex-start;gap:28px}
+.fm-screen{margin:0;display:flex;flex-direction:column;gap:16px;width:390px;flex-shrink:0}
+.fm-cap{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;font-family:'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--fm-ink);min-height:92px;align-content:flex-start}
+.fm-code{font-weight:700;font-size:22px;background:#F5B846;color:#031F4F;padding:2px 10px;border-radius:8px}
+.fm-name{font-weight:700;font-size:22px}
+.fm-hu{font-size:18px;color:var(--fm-muted)}
+.fm-sub{flex-basis:100%;font-size:18px;color:var(--fm-muted)}
+.fm-phone{border-radius:32px;overflow:hidden;box-shadow:0 2px 0 rgba(3,31,79,.08),0 18px 40px rgba(3,31,79,.16);width:390px}
+.fm-arrow{display:flex;flex-direction:column;align-items:center;gap:8px;width:150px;flex-shrink:0;margin-top:420px;color:#1C4F7F}
+.fm-arrow-label{font:700 18px/1.25 'Atkinson Hyperlegible',system-ui,sans-serif;text-align:center;color:var(--fm-ink)}
+.fm-chip{flex-shrink:0;margin-top:400px;padding:18px 20px;border-radius:16px;border:3px dashed #1C4F7F;font:700 20px/1.3 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--fm-ink);width:200px;box-sizing:border-box;text-align:center}
+
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Semillero ArTIC · UNAD · Épicas 1 y 2</p>
+      <h1>Prototipo CiberHer: HU-001 a HU-004</h1>
+      <p class="lede">Pantallas de acceso, menú principal y administración de usuarias para la app de mujeres del barrio Britalia. Recorra el prototipo tocando los botones, o revise el mapa con todo el flujo.</p>
+    </div>
+    <div class="actions" style="flex: 0 1 auto">
+      <a class="btn btn-primary" href="01-bienvenida.html">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+        Recorrer el prototipo
+      </a>
+      <a class="btn btn-secondary" href="CiberHer-prototipo.zip" download>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>
+        Descargar (.zip)
+      </a>
+    </div>
+  </header>
+  
+
+  <div class="map-bar">
+    <ul class="legend" aria-label="Cómo leer el mapa">
+      <li><span class="k-code">07b</span> número de pantalla</li>
+      <li><b>→</b> botón que lleva a la siguiente</li>
+      <li><span class="k-chip">Desde…</span> el recorrido empieza en otra fila</li>
+    </ul>
+    <div class="zoom" role="group" aria-label="Tamaño del mapa">
+      <button type="button" id="menos" aria-label="Alejar">−</button>
+      <output id="nivel" for="menos mas">42 %</output>
+      <button type="button" id="mas" aria-label="Acercar">+</button>
+    </div>
+  </div>
+
+  <div class="canvas-box" id="mapa" tabindex="0" aria-label="Mapa de flujo del prototipo">
+    <div class="canvas-zoom" id="lienzo">
+      <div class="fm-map"><section class="fm-lane"><header class="fm-lane-head"><h2>Entrar y administrar usuarias</h2><p>HU-004 → HU-001 → HU-002</p></header><div class="fm-row"><figure class="fm-screen" id="p-01" data-file="01-bienvenida.html"><figcaption class="fm-cap"><span class="fm-code">01</span><span class="fm-name"><a href="01-bienvenida.html">Bienvenida</a></span><span class="fm-hu">HU-001</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 76px 28px 48px; display: flex; flex-direction: column; align-items: center; gap: 18px; border-radius: 0 0 36px 36px">
+    <div style="width: 108px; height: 108px; border-radius: 54px; background: #F5B846; display: flex; align-items: center; justify-content: center">
+      <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg>
+    </div>
+    <h1 style="margin: 0; font-size: 42px; font-weight: 700; letter-spacing: 0.5px">CiberHer</h1>
+    <p style="margin: 0; font-size: 20px; color: #F5B846; font-weight: 700; text-align: center">Mujeres conectadas, seguras</p>
+  </div>
+  <div style="flex: 1; padding: 36px 28px 32px; display: flex; flex-direction: column; gap: 18px">
+    <p style="margin: 0; font-size: 20px; line-height: 1.45; text-align: center">Aprenda a cuidarse en internet, a su propio ritmo. Funciona también sin conexión.</p>
+    <div style="flex: 1"></div>
+    <a href="02-entrar.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none">Entrar</a>
+    <a href="03-crear-cuenta.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #FFFFFF; border: 2px solid #031F4F; box-sizing: border-box; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none">Crear mi cuenta</a>
+    <a href="01b-bienvenida-letra-grande.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 12px; height: 56px; border: none; border-radius: 16px; background: #E6ECEF; color: #031F4F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19l5-14 5 14"></path><path d="M5 14h6"></path><path d="M15 19l3.5-9 3.5 9"></path><path d="M16.3 16h4.4"></path></svg>
+      <span>Letra grande: desactivada</span>
+    </a>
+  </div>
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Entrar</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-02" data-file="02-entrar.html"><figcaption class="fm-cap"><span class="fm-code">02</span><span class="fm-name"><a href="02-entrar.html">Entrar</a></span><span class="fm-hu">HU-004</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Entrar</h1>
+  </div>
+
+  <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+    
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Correo electrónico</label>
+      <input type="email" autocomplete="email" placeholder="nombre@correo.com" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Contraseña</label>
+      <div style="display: flex; gap: 8px">
+        <input type="password" autocomplete="current-password" style="flex: 1; min-width: 0; height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <button aria-pressed="false" style="width: 96px; height: 60px; border: 2px solid #1C4F7F; border-radius: 14px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Mostrar</button>
+      </div>
+    </div>
+
+    <a href="06-inicio.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none; margin-top: 8px">Entrar</a>
+
+    <a href="04-recuperar.html" style="align-self: center; font-size: 20px; font-weight: 700; padding: 10px 8px">¿Olvidó su contraseña?</a>
+
+    <div style="flex: 1"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 18px; border-top: 2px solid #DCE3E6">
+      <p style="margin: 0; font-size: 18px">¿Todavía no tiene cuenta?</p>
+      <a href="03-crear-cuenta.html" style="font-size: 20px; font-weight: 700; padding: 8px">Crear mi cuenta</a>
+    </div>
+  </div>
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Entrar</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-06" data-file="06-inicio.html"><figcaption class="fm-cap"><span class="fm-code">06</span><span class="fm-name"><a href="06-inicio.html">Inicio y menú</a></span><span class="fm-hu">HU-001</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 24px 28px; display: flex; flex-direction: column; gap: 6px; border-radius: 0 0 28px 28px">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <div style="width: 56px; height: 56px; border-radius: 28px; background: #F5B846; color: #031F4F; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700" aria-hidden="true">MR</div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <p style="margin: 0; font-size: 26px; font-weight: 700">Hola, María</p>
+        <p style="margin: 0; font-size: 18px; color: #DCE6EC">¿Qué quiere hacer hoy?</p>
+      </div>
+    </div>
+  </div>
+
+  <nav aria-label="Menú principal" style="flex: 1; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+      
+        <button style="height: 150px; box-sizing: border-box; padding: 16px 12px; border: 2px solid #DCE3E6; border-radius: 20px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-family: inherit; color: #031F4F; cursor: pointer">
+          <span style="width: 64px; height: 64px; border-radius: 18px; background: #FCE6B8; display: flex; align-items: center; justify-content: center">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"></path><path d="M12 6v13.5"></path></svg>
+          </span>
+          <span style="font-size: 20px; font-weight: 700">Aprender</span>
+        </button>
+      
+        <button style="height: 150px; box-sizing: border-box; padding: 16px 12px; border: 2px solid #DCE3E6; border-radius: 20px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-family: inherit; color: #031F4F; cursor: pointer">
+          <span style="width: 64px; height: 64px; border-radius: 18px; background: #D9E7EF; display: flex; align-items: center; justify-content: center">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"></path><path d="M7 16v-4M12 16V8M17 16V5"></path></svg>
+          </span>
+          <span style="font-size: 20px; font-weight: 700">Mis avances</span>
+        </button>
+      
+        <button style="height: 150px; box-sizing: border-box; padding: 16px 12px; border: 2px solid #DCE3E6; border-radius: 20px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-family: inherit; color: #031F4F; cursor: pointer">
+          <span style="width: 64px; height: 64px; border-radius: 18px; background: #D9E7EF; display: flex; align-items: center; justify-content: center">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"></path></svg>
+          </span>
+          <span style="font-size: 20px; font-weight: 700">Mi perfil</span>
+        </button>
+      
+        <button style="height: 150px; box-sizing: border-box; padding: 16px 12px; border: 2px solid #DCE3E6; border-radius: 20px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-family: inherit; color: #031F4F; cursor: pointer">
+          <span style="width: 64px; height: 64px; border-radius: 18px; background: #FCE6B8; display: flex; align-items: center; justify-content: center">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"></path><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"></path></svg>
+          </span>
+          <span style="font-size: 20px; font-weight: 700">Ayuda</span>
+        </button>
+      
+    </div>
+
+    
+      <a href="07-usuarias.html" style="display: flex; align-items: center; gap: 16px; min-height: 84px; box-sizing: border-box; padding: 14px 18px; border-radius: 20px; background: #1C4F7F; color: #FFFFFF; text-decoration: none">
+        <span style="width: 52px; height: 52px; border-radius: 14px; background: #031F4F; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F5B846" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"></path><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"></path><path d="M18 14.3c2.2.7 3.5 2.8 3.5 5.7"></path></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 2px; flex: 1">
+          <span style="font-size: 20px; font-weight: 700">Administrar usuarias</span>
+          <span style="font-size: 16px; color: #E3EEF5">Solo para administradoras</span>
+        </span>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </a>
+    
+
+    <p style="margin: 0; font-size: 16px; color: #4A5A61; text-align: center">Aprender, avances, perfil y ayuda llegan en los próximos sprints.</p>
+
+    <div style="flex: 1"></div>
+
+    <a href="01-bienvenida.html" style="display: flex; align-items: center; justify-content: center; gap: 10px; height: 60px; border-radius: 16px; border: 2px solid #031F4F; box-sizing: border-box; color: #031F4F; font-size: 20px; font-weight: 700; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"></path><path d="M10 16l-4-4 4-4"></path><path d="M6 12h10"></path></svg>
+      Cerrar sesión
+    </a>
+  </nav>
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Administrar usuarias</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-07" data-file="07-usuarias.html"><figcaption class="fm-cap"><span class="fm-code">07</span><span class="fm-name"><a href="07-usuarias.html">Usuarias</a></span><span class="fm-hu">HU-002</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="06-inicio.html" aria-label="Volver al inicio" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Usuarias</h1>
+    </div>
+
+    <div style="flex: 1; min-height: 0; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 18px; font-weight: 700">Buscar</label>
+        <input type="search" placeholder="Nombre o correo" value="" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div role="group" aria-label="Filtrar por estado" style="display: flex; flex-wrap: wrap; gap: 8px">
+        
+          <button aria-pressed="true" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #1C4F7F; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Todas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Activas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Inactivas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Bloqueadas</button>
+        
+      </div>
+
+      <p style="margin: 0; font-size: 16px; color: #4A5A61">5 usuarias</p>
+
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; overflow-y: auto">
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">MR</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">María Rodríguez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">maria.r@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">LM</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Luz Marina Gómez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">luzmarina.g@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">AB</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Ana Beltrán</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">ana.beltran@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #FCE6B8; color: #6B4500; flex-shrink: 0">Bloqueada</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">RE</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Rosa Elena Pérez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">rosaelena@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #E4E7E9; color: #3E4C52; flex-shrink: 0">Inactiva</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">CD</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Carmen Díaz</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">carmen.diaz@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+        
+      </ul>
+
+      <a href="07d-nueva-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; height: 62px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 21px; font-weight: 700; cursor: pointer; flex-shrink: 0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Nueva usuaria
+      </a>
+    </div>
+  
+
+  
+
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Toca una usuaria</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-07b" data-file="07b-editar-usuaria.html"><figcaption class="fm-cap"><span class="fm-code">07b</span><span class="fm-name"><a href="07b-editar-usuaria.html">Editar usuaria</a></span><span class="fm-hu">HU-002</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="07-usuarias.html" aria-label="Volver a usuarias" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 52px; height: 52px; border: none; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">Editar usuaria</h1>
+    </div>
+
+    <div style="flex: 1; padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px">
+      
+
+      
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span style="font-size: 18px; font-weight: 700">Estado</span>
+          <span style="padding: 6px 14px; border-radius: 12px; font-size: 16px; font-weight: 700; background: #DDEBF3; color: #1C4F7F">Activa</span>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Nombre completo *</label>
+        <input type="text" value="María Rodríguez" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" value="maria.r@correo.com" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Rol</label>
+        <select value="Usuaria" style="height: 56px; box-sizing: border-box; padding: 0 12px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+          <option value="Usuaria">Usuaria</option>
+          <option value="Administradora">Administradora</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        <a href="07-usuarias.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1; height: 60px; border: 2px solid #031F4F; border-radius: 16px; background: #FFFFFF; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Cancelar</a>
+        <a href="07g-usuarias-cambios-guardados.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1.4; height: 60px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Guardar cambios</a>
+      </div>
+
+      
+        <div style="height: 2px; background: #DCE3E6; margin: 4px 0"></div>
+        <a href="07h-contrasena-temporal.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 56px; border: 2px solid #1C4F7F; border-radius: 16px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Dar contraseña temporal</a>
+        <a href="07c-confirmar-inactivar.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 56px; border: 2px solid #B42318; border-radius: 16px; background: #FFFFFF; color: #B42318; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Inactivar usuaria</a>
+        <div style="flex: 1"></div>
+        <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #4A5A61">Creada el 12/10/2026 · Último cambio: 28/10/2026 por Admin Centro Britalia</p>
+      
+    </div>
+  
+
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Inactivar usuaria</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-07c" data-file="07c-confirmar-inactivar.html"><figcaption class="fm-cap"><span class="fm-code">07c</span><span class="fm-name"><a href="07c-confirmar-inactivar.html">Confirmar inactivación</a></span><span class="fm-hu">HU-002</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <button aria-label="Volver a usuarias" style="width: 52px; height: 52px; border: none; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </button>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">Editar usuaria</h1>
+    </div>
+
+    <div style="flex: 1; padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px">
+      
+
+      
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span style="font-size: 18px; font-weight: 700">Estado</span>
+          <span style="padding: 6px 14px; border-radius: 12px; font-size: 16px; font-weight: 700; background: #DDEBF3; color: #1C4F7F">Activa</span>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Nombre completo *</label>
+        <input type="text" value="María Rodríguez" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" value="maria.r@correo.com" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Rol</label>
+        <select value="Usuaria" style="height: 56px; box-sizing: border-box; padding: 0 12px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+          <option value="Usuaria">Usuaria</option>
+          <option value="Administradora">Administradora</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        <button style="flex: 1; height: 60px; border: 2px solid #031F4F; border-radius: 16px; background: #FFFFFF; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Cancelar</button>
+        <button style="flex: 1.4; height: 60px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Guardar cambios</button>
+      </div>
+
+      
+        <div style="height: 2px; background: #DCE3E6; margin: 4px 0"></div>
+        <button style="height: 56px; border: 2px solid #1C4F7F; border-radius: 16px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Dar contraseña temporal</button>
+        <button style="height: 56px; border: 2px solid #B42318; border-radius: 16px; background: #FFFFFF; color: #B42318; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Inactivar usuaria</button>
+        <div style="flex: 1"></div>
+        <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #4A5A61">Creada el 12/10/2026 · Último cambio: 28/10/2026 por Admin Centro Britalia</p>
+      
+    </div>
+  
+
+  
+    <div style="position: absolute; inset: 0; background: rgba(3, 31, 79, 0.72); display: flex; align-items: flex-end; padding: 16px">
+      <div role="dialog" aria-modal="true" style="width: 100%; box-sizing: border-box; padding: 26px 22px 22px; border-radius: 24px; background: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 24px; font-weight: 700">¿Inactivar a María Rodríguez?</h2>
+        <p style="margin: 0; font-size: 18px; line-height: 1.45">No podrá entrar a la app. Sus datos y avances se conservan y puede reactivarla cuando quiera.</p>
+        <a href="07e-usuaria-inactivada.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 60px; border: none; border-radius: 16px; background: #B42318; color: #FFFFFF; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Sí, inactivar</a>
+        <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 60px; border: 2px solid #031F4F; border-radius: 16px; background: #FFFFFF; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">No, volver</a>
+      </div>
+    </div>
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Sí, inactivar</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-07e" data-file="07e-usuaria-inactivada.html"><figcaption class="fm-cap"><span class="fm-code">07e</span><span class="fm-name"><a href="07e-usuaria-inactivada.html">Usuaria inactivada</a></span><span class="fm-hu">HU-002</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="07f-usuarias-con-inactiva.html" aria-label="Volver a usuarias" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 52px; height: 52px; border: none; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">Editar usuaria</h1>
+    </div>
+
+    <div style="flex: 1; padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px">
+      
+        <div role="status" style="display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 14px; background: #E3EEF5; border: 2px solid #1C4F7F">
+          <p style="margin: 0; font-size: 17px; line-height: 1.4">Usuaria inactivada. Ya no puede entrar a la app.</p>
+        </div>
+      
+
+      
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span style="font-size: 18px; font-weight: 700">Estado</span>
+          <span style="padding: 6px 14px; border-radius: 12px; font-size: 16px; font-weight: 700; background: #E4E7E9; color: #3E4C52">Inactiva</span>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Nombre completo *</label>
+        <input type="text" value="María Rodríguez" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" value="maria.r@correo.com" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Rol</label>
+        <select value="Usuaria" style="height: 56px; box-sizing: border-box; padding: 0 12px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+          <option value="Usuaria">Usuaria</option>
+          <option value="Administradora">Administradora</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        <a href="07f-usuarias-con-inactiva.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1; height: 60px; border: 2px solid #031F4F; border-radius: 16px; background: #FFFFFF; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Cancelar</a>
+        <a href="07f-usuarias-con-inactiva.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1.4; height: 60px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Guardar cambios</a>
+      </div>
+
+      
+        <div style="height: 2px; background: #DCE3E6; margin: 4px 0"></div>
+        <button style="height: 56px; border: 2px solid #1C4F7F; border-radius: 16px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Dar contraseña temporal</button>
+        <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 56px; border: 2px solid #1C4F7F; border-radius: 16px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Reactivar usuaria</a>
+        <div style="flex: 1"></div>
+        <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #4A5A61">Inactivada el 29/10/2026 por Admin Centro Britalia</p>
+      
+    </div>
+  
+
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Volver</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-07f" data-file="07f-usuarias-con-inactiva.html"><figcaption class="fm-cap"><span class="fm-code">07f</span><span class="fm-name"><a href="07f-usuarias-con-inactiva.html">Usuarias · con una inactiva</a></span><span class="fm-hu">HU-002</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="06-inicio.html" aria-label="Volver al inicio" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Usuarias</h1>
+    </div>
+
+    <div style="flex: 1; min-height: 0; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 18px; font-weight: 700">Buscar</label>
+        <input type="search" placeholder="Nombre o correo" value="" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div role="group" aria-label="Filtrar por estado" style="display: flex; flex-wrap: wrap; gap: 8px">
+        
+          <button aria-pressed="true" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #1C4F7F; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Todas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Activas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Inactivas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Bloqueadas</button>
+        
+      </div>
+
+      <p style="margin: 0; font-size: 16px; color: #4A5A61">5 usuarias</p>
+
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; overflow-y: auto">
+        
+          <li>
+            <a href="07e-usuaria-inactivada.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">MR</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">María Rodríguez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">maria.r@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #E4E7E9; color: #3E4C52; flex-shrink: 0">Inactiva</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07e-usuaria-inactivada.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">LM</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Luz Marina Gómez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">luzmarina.g@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07e-usuaria-inactivada.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">AB</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Ana Beltrán</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">ana.beltran@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #FCE6B8; color: #6B4500; flex-shrink: 0">Bloqueada</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07e-usuaria-inactivada.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">RE</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Rosa Elena Pérez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">rosaelena@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #E4E7E9; color: #3E4C52; flex-shrink: 0">Inactiva</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07e-usuaria-inactivada.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">CD</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Carmen Díaz</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">carmen.diaz@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+        
+      </ul>
+
+      <a href="07d-nueva-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; height: 62px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 21px; font-weight: 700; cursor: pointer; flex-shrink: 0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Nueva usuaria
+      </a>
+    </div>
+  
+
+  
+
+  
+</div></div></figure></div></section><section class="fm-lane"><header class="fm-lane-head"><h2>Crear cuenta</h2><p>HU-003</p></header><div class="fm-row"><div class="fm-chip">Desde 01 · Bienvenida</div><div class="fm-arrow"><span class="fm-arrow-label">Crear mi cuenta</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-03" data-file="03-crear-cuenta.html"><figcaption class="fm-cap"><span class="fm-code">03</span><span class="fm-name"><a href="03-crear-cuenta.html">Crear cuenta</a></span><span class="fm-hu">HU-003</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 1040px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Crear mi cuenta</h1>
+  </div>
+
+  
+
+  
+    <div style="flex: 1; padding: 24px 24px 28px; display: flex; flex-direction: column; gap: 18px">
+      <p style="margin: 0; font-size: 18px; line-height: 1.4">Los campos marcados con * son obligatorios.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Nombre completo *</label>
+        <input type="text" autocomplete="name" value="" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" autocomplete="email" placeholder="nombre@correo.com" value="" aria-invalid="false" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Contraseña *</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <ul style="margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px">
+          
+            <li style="display: flex; align-items: center; gap: 10px; font-size: 17px; color: #5C6F77; font-weight: 400">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #5C6F77; display: flex; align-items: center; justify-content: center; font-size: 14px; box-sizing: border-box"></span>
+              <span>Al menos 8 caracteres</span>
+            </li>
+          
+            <li style="display: flex; align-items: center; gap: 10px; font-size: 17px; color: #5C6F77; font-weight: 400">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #5C6F77; display: flex; align-items: center; justify-content: center; font-size: 14px; box-sizing: border-box"></span>
+              <span>Al menos una letra</span>
+            </li>
+          
+            <li style="display: flex; align-items: center; gap: 10px; font-size: 17px; color: #5C6F77; font-weight: 400">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #5C6F77; display: flex; align-items: center; justify-content: center; font-size: 14px; box-sizing: border-box"></span>
+              <span>Al menos un número</span>
+            </li>
+          
+        </ul>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Repita la contraseña *</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; padding: 14px; border-radius: 14px; background: #FFFFFF; border: 2px solid #DCE3E6">
+        <input type="checkbox" style="width: 30px; height: 30px; margin: 2px 0 0; accent-color: #1C4F7F; flex-shrink: 0">
+        <label style="font-size: 17px; line-height: 1.4">Acepto el tratamiento de mis datos según la Ley 1581 de 2012. <a href="#politica" style="font-weight: 700">Leer la política</a></label>
+      </div>
+
+      <a href="03c-crear-cuenta-exito.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 64px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; margin-top: 4px">Crear mi cuenta</a>
+
+      <p style="margin: 0; text-align: center; font-size: 18px">¿Ya tiene cuenta? <a href="02-entrar.html" style="font-weight: 700">Entrar</a></p>
+    </div>
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Crear mi cuenta</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-03c" data-file="03c-crear-cuenta-exito.html"><figcaption class="fm-cap"><span class="fm-code">03c</span><span class="fm-name"><a href="03c-crear-cuenta-exito.html">Crear cuenta · éxito</a></span><span class="fm-hu">HU-003</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 1040px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Crear mi cuenta</h1>
+  </div>
+
+  
+    <div style="flex: 1; padding: 48px 28px; display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center">
+      <div style="width: 112px; height: 112px; border-radius: 56px; background: #E3EEF5; display: flex; align-items: center; justify-content: center">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#1C4F7F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.7 2.7L16 9.8"></path></svg>
+      </div>
+      <h2 style="margin: 0; font-size: 30px; font-weight: 700">¡Su cuenta está lista!</h2>
+      <p style="margin: 0; font-size: 20px; line-height: 1.45">Ya puede entrar a CiberHer con su correo y su contraseña.</p>
+      <a href="06-inicio.html" style="align-self: stretch; display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none; margin-top: 12px">Ir al inicio</a>
+    </div>
+  
+
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Ir al inicio</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="fm-chip">Va a 06 · Inicio</div></div></section><section class="fm-lane"><header class="fm-lane-head"><h2>Recuperar contraseña</h2><p>HU-004</p></header><div class="fm-row"><div class="fm-chip">Desde 02 · Entrar</div><div class="fm-arrow"><span class="fm-arrow-label">¿Olvidó su contraseña?</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-04" data-file="04-recuperar.html"><figcaption class="fm-cap"><span class="fm-code">04</span><span class="fm-name"><a href="04-recuperar.html">Recuperar contraseña</a></span><span class="fm-hu">HU-004</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="02-entrar.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">Recuperar contraseña</h1>
+  </div>
+
+  <div style="flex: 1; padding: 32px 24px 28px; display: flex; flex-direction: column; gap: 22px">
+    <div style="width: 88px; height: 88px; border-radius: 44px; background: #E3EEF5; display: flex; align-items: center; justify-content: center; align-self: center">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#1C4F7F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path><path d="M12 14.5v2.5"></path></svg>
+    </div>
+    <p style="margin: 0; font-size: 20px; line-height: 1.45; text-align: center">Escriba el correo de su cuenta. Le enviaremos un código de 6 números para crear una contraseña nueva.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Correo electrónico</label>
+      <input type="email" autocomplete="email" placeholder="nombre@correo.com" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+    </div>
+
+    
+      <a href="04b-recuperar-codigo-enviado.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 64px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer">Enviar código</a>
+    
+
+    
+
+    <div style="flex: 1"></div>
+    <p style="margin: 0; font-size: 18px; line-height: 1.4; text-align: center">¿No tiene correo o no le llega? Pida ayuda a la administradora del Centro.</p>
+  </div>
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Enviar código</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-04b" data-file="04b-recuperar-codigo-enviado.html"><figcaption class="fm-cap"><span class="fm-code">04b</span><span class="fm-name"><a href="04b-recuperar-codigo-enviado.html">Recuperar · código enviado</a></span><span class="fm-hu">HU-004</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="02-entrar.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">Recuperar contraseña</h1>
+  </div>
+
+  <div style="flex: 1; padding: 32px 24px 28px; display: flex; flex-direction: column; gap: 22px">
+    <div style="width: 88px; height: 88px; border-radius: 44px; background: #E3EEF5; display: flex; align-items: center; justify-content: center; align-self: center">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#1C4F7F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path><path d="M12 14.5v2.5"></path></svg>
+    </div>
+    <p style="margin: 0; font-size: 20px; line-height: 1.45; text-align: center">Escriba el correo de su cuenta. Le enviaremos un código de 6 números para crear una contraseña nueva.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Correo electrónico</label>
+      <input type="email" autocomplete="email" placeholder="nombre@correo.com" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+    </div>
+
+    
+
+    
+      <div role="status" style="display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #E3EEF5; border: 2px solid #1C4F7F">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1C4F7F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3.5 6.5l8.5 6.5 8.5-6.5"></path></svg>
+        <p style="margin: 0; font-size: 18px; line-height: 1.4">Si ese correo tiene una cuenta, le llegará un código en unos minutos. El código sirve durante 15 minutos.</p>
+      </div>
+      <a href="05-nueva-contrasena.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none">Ya tengo el código</a>
+    
+
+    <div style="flex: 1"></div>
+    <p style="margin: 0; font-size: 18px; line-height: 1.4; text-align: center">¿No tiene correo o no le llega? Pida ayuda a la administradora del Centro.</p>
+  </div>
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Ya tengo el código</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-05" data-file="05-nueva-contrasena.html"><figcaption class="fm-cap"><span class="fm-code">05</span><span class="fm-name"><a href="05-nueva-contrasena.html">Nueva contraseña</a></span><span class="fm-hu">HU-004</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="04-recuperar.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">Nueva contraseña</h1>
+  </div>
+
+  
+
+  
+    <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+      
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Código de 6 números</label>
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="height: 72px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 34px; font-weight: 700; letter-spacing: 14px; text-align: center; color: #031F4F">
+        <p style="margin: 0; font-size: 17px; color: #4A5A61">Lo enviamos a m•••@correo.com</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Contraseña nueva</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <p style="margin: 0; font-size: 17px; line-height: 1.4; color: #4A5A61">Al menos 8 caracteres, con una letra y un número.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Repita la contraseña nueva</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <a href="05c-nueva-contrasena-lista.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 64px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; margin-top: 4px">Guardar contraseña</a>
+    </div>
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Guardar contraseña</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><figure class="fm-screen" id="p-05c" data-file="05c-nueva-contrasena-lista.html"><figcaption class="fm-cap"><span class="fm-code">05c</span><span class="fm-name"><a href="05c-nueva-contrasena-lista.html">Nueva contraseña · lista</a></span><span class="fm-hu">HU-004</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="04-recuperar.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">Nueva contraseña</h1>
+  </div>
+
+  
+    <div style="flex: 1; padding: 56px 28px; display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center">
+      <div style="width: 112px; height: 112px; border-radius: 56px; background: #E3EEF5; display: flex; align-items: center; justify-content: center">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#1C4F7F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.7 2.7L16 9.8"></path></svg>
+      </div>
+      <h2 style="margin: 0; font-size: 30px; font-weight: 700">Contraseña cambiada</h2>
+      <p style="margin: 0; font-size: 20px; line-height: 1.45">Ya puede entrar con su contraseña nueva. La anterior dejó de funcionar.</p>
+      <a href="02-entrar.html" style="align-self: stretch; display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none; margin-top: 12px">Entrar</a>
+    </div>
+  
+
+  
+</div></div></figure><div class="fm-arrow"><span class="fm-arrow-label">Entrar</span><svg width="96" height="24" viewBox="0 0 96 24" aria-hidden="true"><path d="M2 12h86" stroke="currentColor" stroke-width="3" fill="none"/><path d="M80 4l10 8-10 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="fm-chip">Va a 02 · Entrar</div></div></section><section class="fm-lane"><header class="fm-lane-head"><h2>Más acciones de administración</h2><p>HU-002 · cada una sale de la pantalla indicada</p></header><div class="fm-row"><figure class="fm-screen" id="p-07d" data-file="07d-nueva-usuaria.html"><figcaption class="fm-cap"><span class="fm-code">07d</span><span class="fm-name"><a href="07d-nueva-usuaria.html">Nueva usuaria</a></span><span class="fm-hu">HU-002</span><span class="fm-sub">Desde 07 · Nueva usuaria</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="07-usuarias.html" aria-label="Volver a usuarias" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 52px; height: 52px; border: none; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">Nueva usuaria</h1>
+    </div>
+
+    <div style="flex: 1; padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px">
+      
+
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Nombre completo *</label>
+        <input type="text" value="" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" value="" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Rol</label>
+        <select value="Usuaria" style="height: 56px; box-sizing: border-box; padding: 0 12px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+          <option value="Usuaria">Usuaria</option>
+          <option value="Administradora">Administradora</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        <a href="07-usuarias.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1; height: 60px; border: 2px solid #031F4F; border-radius: 16px; background: #FFFFFF; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Cancelar</a>
+        <a href="07-usuarias.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1.4; height: 60px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Crear usuaria</a>
+      </div>
+
+      
+    </div>
+  
+
+  
+</div></div></figure><figure class="fm-screen" id="p-07h" data-file="07h-contrasena-temporal.html"><figcaption class="fm-cap"><span class="fm-code">07h</span><span class="fm-name"><a href="07h-contrasena-temporal.html">Contraseña temporal</a></span><span class="fm-hu">HU-002</span><span class="fm-sub">Desde 07b · Dar contraseña temporal</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="07-usuarias.html" aria-label="Volver a usuarias" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 52px; height: 52px; border: none; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700">Editar usuaria</h1>
+    </div>
+
+    <div style="flex: 1; padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px">
+      
+        <div role="status" style="display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 14px; background: #E3EEF5; border: 2px solid #1C4F7F">
+          <p style="margin: 0; font-size: 17px; line-height: 1.4">Contraseña temporal: K7m2-Rq9p. Entréguela en persona; deberá cambiarla al entrar.</p>
+        </div>
+      
+
+      
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span style="font-size: 18px; font-weight: 700">Estado</span>
+          <span style="padding: 6px 14px; border-radius: 12px; font-size: 16px; font-weight: 700; background: #DDEBF3; color: #1C4F7F">Activa</span>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Nombre completo *</label>
+        <input type="text" value="María Rodríguez" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" value="maria.r@correo.com" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 19px; font-weight: 700">Rol</label>
+        <select value="Usuaria" style="height: 56px; box-sizing: border-box; padding: 0 12px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+          <option value="Usuaria">Usuaria</option>
+          <option value="Administradora">Administradora</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        <a href="07-usuarias.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1; height: 60px; border: 2px solid #031F4F; border-radius: 16px; background: #FFFFFF; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Cancelar</a>
+        <a href="07g-usuarias-cambios-guardados.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; flex: 1.4; height: 60px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 19px; font-weight: 700; cursor: pointer">Guardar cambios</a>
+      </div>
+
+      
+        <div style="height: 2px; background: #DCE3E6; margin: 4px 0"></div>
+        <button style="height: 56px; border: 2px solid #1C4F7F; border-radius: 16px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Dar contraseña temporal</button>
+        <a href="07c-confirmar-inactivar.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 56px; border: 2px solid #B42318; border-radius: 16px; background: #FFFFFF; color: #B42318; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">Inactivar usuaria</a>
+        <div style="flex: 1"></div>
+        <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #4A5A61">Creada el 12/10/2026 · Último cambio: 28/10/2026 por Admin Centro Britalia</p>
+      
+    </div>
+  
+
+  
+</div></div></figure><figure class="fm-screen" id="p-07g" data-file="07g-usuarias-cambios-guardados.html"><figcaption class="fm-cap"><span class="fm-code">07g</span><span class="fm-name"><a href="07g-usuarias-cambios-guardados.html">Usuarias · cambios guardados</a></span><span class="fm-hu">HU-002</span><span class="fm-sub">Desde 07b · Guardar cambios</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="position: relative; width: 390px; height: 920px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+
+  
+    <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 22px; display: flex; align-items: center; gap: 12px">
+      <a href="06-inicio.html" aria-label="Volver al inicio" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Usuarias</h1>
+    </div>
+
+    <div style="flex: 1; min-height: 0; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      
+        <div role="status" style="display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #E3EEF5; border: 2px solid #1C4F7F">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C4F7F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.7 2.7L16 9.8"></path></svg>
+          <p style="margin: 0; font-size: 17px">Cambios guardados.</p>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label style="font-size: 18px; font-weight: 700">Buscar</label>
+        <input type="search" placeholder="Nombre o correo" value="" style="height: 56px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 19px; color: #031F4F">
+      </div>
+
+      <div role="group" aria-label="Filtrar por estado" style="display: flex; flex-wrap: wrap; gap: 8px">
+        
+          <button aria-pressed="true" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #1C4F7F; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Todas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Activas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Inactivas</button>
+        
+          <button aria-pressed="false" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #1C4F7F; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">Bloqueadas</button>
+        
+      </div>
+
+      <p style="margin: 0; font-size: 16px; color: #4A5A61">5 usuarias</p>
+
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; overflow-y: auto">
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">MR</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">María Rodríguez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">maria.r@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">LM</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Luz Marina Gómez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">luzmarina.g@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">AB</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Ana Beltrán</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">ana.beltran@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #FCE6B8; color: #6B4500; flex-shrink: 0">Bloqueada</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">RE</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Rosa Elena Pérez</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">rosaelena@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #E4E7E9; color: #3E4C52; flex-shrink: 0">Inactiva</span>
+            </a>
+          </li>
+        
+          <li>
+            <a href="07b-editar-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 2px solid #DCE3E6; font-family: inherit; color: #031F4F; text-align: left; cursor: pointer">
+              <span style="width: 44px; height: 44px; border-radius: 22px; background: #D9E7EF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0" aria-hidden="true">CD</span>
+              <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                <span style="font-size: 18px; font-weight: 700">Carmen Díaz</span>
+                <span style="font-size: 15px; color: #4A5A61; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">carmen.diaz@correo.com</span>
+              </span>
+              <span style="padding: 4px 10px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #DDEBF3; color: #1C4F7F; flex-shrink: 0">Activa</span>
+            </a>
+          </li>
+        
+        
+      </ul>
+
+      <a href="07d-nueva-usuaria.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; height: 62px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 21px; font-weight: 700; cursor: pointer; flex-shrink: 0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Nueva usuaria
+      </a>
+    </div>
+  
+
+  
+
+  
+</div></div></figure></div></section><section class="fm-lane"><header class="fm-lane-head"><h2>Estados alternativos</h2><p>Mensajes de error y variantes para revisar</p></header><div class="fm-row"><figure class="fm-screen" id="p-01b" data-file="01b-bienvenida-letra-grande.html"><figcaption class="fm-cap"><span class="fm-code">01b</span><span class="fm-name"><a href="01b-bienvenida-letra-grande.html">Bienvenida · letra grande</a></span><span class="fm-hu">HU-001</span><span class="fm-sub">Variante de 01</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 76px 28px 48px; display: flex; flex-direction: column; align-items: center; gap: 18px; border-radius: 0 0 36px 36px">
+    <div style="width: 108px; height: 108px; border-radius: 54px; background: #F5B846; display: flex; align-items: center; justify-content: center">
+      <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg>
+    </div>
+    <h1 style="margin: 0; font-size: 50px; font-weight: 700; letter-spacing: 0.5px">CiberHer</h1>
+    <p style="margin: 0; font-size: 24px; color: #F5B846; font-weight: 700; text-align: center">Mujeres conectadas, seguras</p>
+  </div>
+  <div style="flex: 1; padding: 36px 28px 32px; display: flex; flex-direction: column; gap: 18px">
+    <p style="margin: 0; font-size: 24px; line-height: 1.45; text-align: center">Aprenda a cuidarse en internet, a su propio ritmo. Funciona también sin conexión.</p>
+    <div style="flex: 1"></div>
+    <a href="02-entrar.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 26px; font-weight: 700; text-decoration: none">Entrar</a>
+    <a href="03-crear-cuenta.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #FFFFFF; border: 2px solid #031F4F; box-sizing: border-box; color: #031F4F; font-size: 26px; font-weight: 700; text-decoration: none">Crear mi cuenta</a>
+    <a href="01-bienvenida.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 12px; height: 56px; border: none; border-radius: 16px; background: #E6ECEF; color: #031F4F; font-family: inherit; font-size: 18px; font-weight: 700; cursor: pointer">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#031F4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19l5-14 5 14"></path><path d="M5 14h6"></path><path d="M15 19l3.5-9 3.5 9"></path><path d="M16.3 16h4.4"></path></svg>
+      <span>Letra grande: activada</span>
+    </a>
+  </div>
+</div></div></figure><figure class="fm-screen" id="p-02b" data-file="02b-entrar-credenciales-incorrectas.html"><figcaption class="fm-cap"><span class="fm-code">02b</span><span class="fm-name"><a href="02b-entrar-credenciales-incorrectas.html">Entrar · credenciales incorrectas</a></span><span class="fm-hu">HU-004</span><span class="fm-sub">Variante de 02</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Entrar</h1>
+  </div>
+
+  <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+    
+      <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #FDECEA; border: 2px solid #B42318">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5"></path><path d="M12 16.5h.01"></path></svg>
+        <p style="margin: 0; font-size: 18px; line-height: 1.4; color: #031F4F">El correo o la contraseña no son correctos. Revíselos e intente de nuevo.</p>
+      </div>
+    
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Correo electrónico</label>
+      <input type="email" autocomplete="email" placeholder="nombre@correo.com" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Contraseña</label>
+      <div style="display: flex; gap: 8px">
+        <input type="password" autocomplete="current-password" style="flex: 1; min-width: 0; height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <button aria-pressed="false" style="width: 96px; height: 60px; border: 2px solid #1C4F7F; border-radius: 14px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Mostrar</button>
+      </div>
+    </div>
+
+    <a href="06-inicio.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none; margin-top: 8px">Entrar</a>
+
+    <a href="04-recuperar.html" style="align-self: center; font-size: 20px; font-weight: 700; padding: 10px 8px">¿Olvidó su contraseña?</a>
+
+    <div style="flex: 1"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 18px; border-top: 2px solid #DCE3E6">
+      <p style="margin: 0; font-size: 18px">¿Todavía no tiene cuenta?</p>
+      <a href="03-crear-cuenta.html" style="font-size: 20px; font-weight: 700; padding: 8px">Crear mi cuenta</a>
+    </div>
+  </div>
+</div></div></figure><figure class="fm-screen" id="p-02c" data-file="02c-entrar-cuenta-bloqueada.html"><figcaption class="fm-cap"><span class="fm-code">02c</span><span class="fm-name"><a href="02c-entrar-cuenta-bloqueada.html">Entrar · cuenta bloqueada</a></span><span class="fm-hu">HU-004</span><span class="fm-sub">Variante de 02</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Entrar</h1>
+  </div>
+
+  <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+    
+      <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #FDECEA; border: 2px solid #B42318">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5"></path><path d="M12 16.5h.01"></path></svg>
+        <p style="margin: 0; font-size: 18px; line-height: 1.4; color: #031F4F">Por su seguridad, la cuenta quedó bloqueada 15 minutos después de 5 intentos fallidos.</p>
+      </div>
+    
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Correo electrónico</label>
+      <input type="email" autocomplete="email" placeholder="nombre@correo.com" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Contraseña</label>
+      <div style="display: flex; gap: 8px">
+        <input type="password" autocomplete="current-password" style="flex: 1; min-width: 0; height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <button aria-pressed="false" style="width: 96px; height: 60px; border: 2px solid #1C4F7F; border-radius: 14px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Mostrar</button>
+      </div>
+    </div>
+
+    <a href="06-inicio.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none; margin-top: 8px">Entrar</a>
+
+    <a href="04-recuperar.html" style="align-self: center; font-size: 20px; font-weight: 700; padding: 10px 8px">¿Olvidó su contraseña?</a>
+
+    <div style="flex: 1"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 18px; border-top: 2px solid #DCE3E6">
+      <p style="margin: 0; font-size: 18px">¿Todavía no tiene cuenta?</p>
+      <a href="03-crear-cuenta.html" style="font-size: 20px; font-weight: 700; padding: 8px">Crear mi cuenta</a>
+    </div>
+  </div>
+</div></div></figure><figure class="fm-screen" id="p-02d" data-file="02d-entrar-cuenta-inactiva.html"><figcaption class="fm-cap"><span class="fm-code">02d</span><span class="fm-name"><a href="02d-entrar-cuenta-inactiva.html">Entrar · cuenta inactiva</a></span><span class="fm-hu">HU-004</span><span class="fm-sub">Variante de 02</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Entrar</h1>
+  </div>
+
+  <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+    
+      <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #FDECEA; border: 2px solid #B42318">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5"></path><path d="M12 16.5h.01"></path></svg>
+        <p style="margin: 0; font-size: 18px; line-height: 1.4; color: #031F4F">Esta cuenta no está activa. Comuníquese con el Centro de Promoción y Cultura.</p>
+      </div>
+    
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Correo electrónico</label>
+      <input type="email" autocomplete="email" placeholder="nombre@correo.com" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="font-size: 20px; font-weight: 700">Contraseña</label>
+      <div style="display: flex; gap: 8px">
+        <input type="password" autocomplete="current-password" style="flex: 1; min-width: 0; height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <button aria-pressed="false" style="width: 96px; height: 60px; border: 2px solid #1C4F7F; border-radius: 14px; background: #FFFFFF; color: #1C4F7F; font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer">Mostrar</button>
+      </div>
+    </div>
+
+    <a href="06-inicio.html" style="display: flex; align-items: center; justify-content: center; height: 64px; border-radius: 16px; background: #F5B846; color: #031F4F; font-size: 22px; font-weight: 700; text-decoration: none; margin-top: 8px">Entrar</a>
+
+    <a href="04-recuperar.html" style="align-self: center; font-size: 20px; font-weight: 700; padding: 10px 8px">¿Olvidó su contraseña?</a>
+
+    <div style="flex: 1"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 18px; border-top: 2px solid #DCE3E6">
+      <p style="margin: 0; font-size: 18px">¿Todavía no tiene cuenta?</p>
+      <a href="03-crear-cuenta.html" style="font-size: 20px; font-weight: 700; padding: 8px">Crear mi cuenta</a>
+    </div>
+  </div>
+</div></div></figure><figure class="fm-screen" id="p-03b" data-file="03b-crear-cuenta-errores.html"><figcaption class="fm-cap"><span class="fm-code">03b</span><span class="fm-name"><a href="03b-crear-cuenta-errores.html">Crear cuenta · con errores</a></span><span class="fm-hu">HU-003</span><span class="fm-sub">Variante de 03</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 1040px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="01-bienvenida.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700">Crear mi cuenta</h1>
+  </div>
+
+  
+
+  
+    <div style="flex: 1; padding: 24px 24px 28px; display: flex; flex-direction: column; gap: 18px">
+      <p style="margin: 0; font-size: 18px; line-height: 1.4">Los campos marcados con * son obligatorios.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Nombre completo *</label>
+        <input type="text" autocomplete="name" value="María Rodríguez" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Correo electrónico *</label>
+        <input type="email" autocomplete="email" placeholder="nombre@correo.com" value="maria.r@correo.com" aria-invalid="true" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 3px solid #B42318; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        
+          <p style="margin: 0; font-size: 17px; line-height: 1.35; color: #B42318; font-weight: 700">Este correo ya tiene una cuenta. <a href="02-entrar.html" style="color: #1C4F7F">Entrar</a></p>
+        
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Contraseña *</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 3px solid #B42318; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <ul style="margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px">
+          
+            <li style="display: flex; align-items: center; gap: 10px; font-size: 17px; color: #B42318; font-weight: 700">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #B42318; display: flex; align-items: center; justify-content: center; font-size: 14px; box-sizing: border-box">✕</span>
+              <span>Al menos 8 caracteres</span>
+            </li>
+          
+            <li style="display: flex; align-items: center; gap: 10px; font-size: 17px; color: #1C4F7F; font-weight: 400">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #1C4F7F; display: flex; align-items: center; justify-content: center; font-size: 14px; box-sizing: border-box">✓</span>
+              <span>Al menos una letra</span>
+            </li>
+          
+            <li style="display: flex; align-items: center; gap: 10px; font-size: 17px; color: #1C4F7F; font-weight: 400">
+              <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #1C4F7F; display: flex; align-items: center; justify-content: center; font-size: 14px; box-sizing: border-box">✓</span>
+              <span>Al menos un número</span>
+            </li>
+          
+        </ul>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Repita la contraseña *</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <div style="display: flex; gap: 14px; align-items: flex-start; padding: 14px; border-radius: 14px; background: #FFFFFF; border: 2px solid #DCE3E6">
+        <input type="checkbox" style="width: 30px; height: 30px; margin: 2px 0 0; accent-color: #1C4F7F; flex-shrink: 0">
+        <label style="font-size: 17px; line-height: 1.4">Acepto el tratamiento de mis datos según la Ley 1581 de 2012. <a href="#politica" style="font-weight: 700">Leer la política</a></label>
+      </div>
+
+      <a href="03c-crear-cuenta-exito.html" style="display: flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; height: 64px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; margin-top: 4px">Crear mi cuenta</a>
+
+      <p style="margin: 0; text-align: center; font-size: 18px">¿Ya tiene cuenta? <a href="02-entrar.html" style="font-weight: 700">Entrar</a></p>
+    </div>
+  
+</div></div></figure><figure class="fm-screen" id="p-05b" data-file="05b-nueva-contrasena-codigo-vencido.html"><figcaption class="fm-cap"><span class="fm-code">05b</span><span class="fm-name"><a href="05b-nueva-contrasena-codigo-vencido.html">Nueva contraseña · código vencido</a></span><span class="fm-hu">HU-004</span><span class="fm-sub">Variante de 05</span></figcaption><div class="fm-phone"><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1C4F7F}a:hover{color:#031F4F}
+</style>
+
+<div style="width: 390px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F7F9; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: #031F4F; overflow: hidden">
+  <div style="background: #031F4F; color: #FFFFFF; padding: 52px 20px 24px; display: flex; align-items: center; gap: 12px">
+    <a href="04-recuperar.html" aria-label="Volver" style="width: 52px; height: 52px; border-radius: 14px; background: #1C4F7F; display: flex; align-items: center; justify-content: center; text-decoration: none">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700">Nueva contraseña</h1>
+  </div>
+
+  
+
+  
+    <div style="flex: 1; padding: 28px 24px 28px; display: flex; flex-direction: column; gap: 20px">
+      
+        <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 14px; background: #FDECEA; border: 2px solid #B42318">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <p style="margin: 0; font-size: 18px; line-height: 1.4">El código venció o ya se usó. <a href="04-recuperar.html" style="font-weight: 700">Pedir un código nuevo</a></p>
+        </div>
+      
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Código de 6 números</label>
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="height: 72px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 34px; font-weight: 700; letter-spacing: 14px; text-align: center; color: #031F4F">
+        <p style="margin: 0; font-size: 17px; color: #4A5A61">Lo enviamos a m•••@correo.com</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Contraseña nueva</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+        <p style="margin: 0; font-size: 17px; line-height: 1.4; color: #4A5A61">Al menos 8 caracteres, con una letra y un número.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label style="font-size: 20px; font-weight: 700">Repita la contraseña nueva</label>
+        <input type="password" autocomplete="new-password" style="height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #5C6F77; border-radius: 14px; background: #FFFFFF; font-family: inherit; font-size: 20px; color: #031F4F">
+      </div>
+
+      <button style="height: 64px; border: none; border-radius: 16px; background: #F5B846; color: #031F4F; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; margin-top: 4px">Guardar contraseña</button>
+    </div>
+  
+</div></div></figure></div></section></div>
+    </div>
+  </div>
+
+  <div class="figma">
+    <section>
+      <h2>Qué trae el .zip</h2>
+      <p>Las 23 pantallas en HTML enlazadas entre sí, el mapa de flujo <code>00-mapa-de-flujo.html</code> y un <code>index.html</code> para abrirlo en cualquier navegador o subirlo a Netlify o GitHub Pages.</p>
+    </section>
+    <section>
+      <h2>Llevarlo a Figma ordenado</h2>
+      <ol>
+        <li>Instale el plugin html.to.design.</li>
+        <li>Suba <code>00-mapa-de-flujo.html</code>: llega como un solo tablero con las filas y flechas de este mapa.</li>
+        <li>Para el Play, enlace cada botón con su pantalla en la pestaña Prototype, siguiendo las flechas.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Datos de ejemplo</h2>
+      <p>Los nombres y correos son de muestra. Lo que se escribe en los campos no se guarda; cada estado está prediseñado como pantalla.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var lienzo = document.getElementById('lienzo');
+  var nivel = document.getElementById('nivel');
+  var pasos = [0.25, 0.32, 0.42, 0.55, 0.7, 1];
+  var i = window.innerWidth < 600 ? 1 : 2;
+  function aplicar() {
+    lienzo.style.setProperty('--z', pasos[i]);
+    nivel.textContent = Math.round(pasos[i] * 100) + ' %';
+  }
+  document.getElementById('menos').addEventListener('click', function () { if (i > 0) { i--; aplicar(); } });
+  document.getElementById('mas').addEventListener('click', function () { if (i < pasos.length - 1) { i++; aplicar(); } });
+  aplicar();
+
+})();
+</script>
+</body></html>
